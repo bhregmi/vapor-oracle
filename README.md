@@ -13,3 +13,34 @@ The following environment variables should be configured:
 - DATABASE_USER=db_user
 - DATABASE_PASSW=db_password
 - LOG_LEVEL=debug, trace, info - see Vapor docs
+
+
+
+import cocilib // in addition to SwiftOracle
+
+// connection stuff
+// ...
+try conn.open()
+    let cursor = try conn.cursor()
+    let value1 = 5 //this is the input code
+    var value1var: Int32 = Int32(value1)  // OCILIB call takes a mutable pointer, so need a var
+    var value2: Int32 = 0 // value2 is the output code, currently set as 0 to initialize
+    let sqlStr = "begin TESTREPORT2(:code, :outputcode); end;" // my test proc returns value1*value1
+    
+    // using OCILIB manually
+    cursor.reset()
+    let prepared = OCI_Prepare(cursor.statementPointer, sqlStr)
+    assert(prepared == 1)
+    
+    // bind variables, INOUT mode is the default in OCILIB
+    OCI_BindInt(cursor.statementPointer, ":code", &value1var)
+    OCI_BindInt(cursor.statementPointer, ":outputcode", &value2)
+    
+    // execute
+    let executed = OCI_Execute(cursor.statementPointer);
+    if executed != 1 {
+        throw DatabaseErrors.SQLError(DatabaseError(OCI_GetLastError()))
+    }
+    
+    print("outputcode: \(value2)")  //prints out the 0 from above, doesn't display the corresponding code from the db
+
